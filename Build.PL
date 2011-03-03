@@ -10,8 +10,16 @@ my $builder = Module::Build->new(
     build_requires => {
         'Test::More' => 0,
     },
+    requires => {
+        'Net::Server::Mail::ESMTP::Extension' => 0,
+    },
     add_to_cleanup      => [ 'Net-Server-Mail-ESMTP-HELP-*' ],
     create_makefile_pl => 'traditional',
+    meta_add => {
+        resources => {
+            repository => 'git://github.com/mgrdcm/net-server-mail-esmtp-help.git',
+        },
+    },
 );
 
 $builder->create_build_script();

@@ -3,9 +3,11 @@ package Net::Server::Mail::ESMTP::HELP;
 use warnings;
 use strict;
 
+use base qw(Net::Server::Mail::ESMTP::Extension);
+
 =head1 NAME
 
-Net::Server::Mail::ESMTP::HELP - The great new Net::Server::Mail::ESMTP::HELP!
+Net::Server::Mail::ESMTP::HELP - Simple implementation of HELP for Net::Server::Mail::ESMTP
 
 =head1 VERSION
 
@@ -18,35 +20,90 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
+Simple implementation of HELP for Net::Server::Mail::ESMTP.
 
-Perhaps a little code snippet.
+    use Net::Server::Mail::ESMTP;
+    my $server = new IO::Socket::INET Listen => 1, LocalPort => 25;
 
-    use Net::Server::Mail::ESMTP::HELP;
+    my $conn;
+    while($conn = $server->accept)
+    {
+      my $esmtp = new Net::Server::Mail::ESMTP socket => $conn;
 
-    my $foo = Net::Server::Mail::ESMTP::HELP->new();
-    ...
+      # activate HELP extension
+      $esmtp->register('Net::Server::Mail::ESMTP::HELP');
+
+      # adding (optional) HELP handler
+      $esmtp->set_callback(HELP => \&show_help);
+      $esmtp->process;
+    }
+
+    # if you don't set a custom HELP handler, the default one will be used which just lists all known verbs
+    sub show_help {
+        my ($session, $command) = @_;
+    
+        $session->reply(214, ($command ? "2.0.0 Heck yeah, '$command' rules!\n":'') . "2.0.0 Available Commands: " . join(', ', keys %{$session->{verb}}) . "\nEnd of HELP info");
+    
+        return 1;
+    }
+
+
 
 =head1 EXPORT
 
 A list of functions that can be exported.  You can delete this section
 if you don't export anything, such as for a purely object-oriented module.
 
-=head1 SUBROUTINES/METHODS
-
-=head2 function1
+=head1 FUNCTIONS
 
 =cut
 
-sub function1 {
-}
-
-=head2 function2
+=head2 verb
 
 =cut
 
-sub function2 {
+sub verb {
+    return [ 'HELP' => 'help' ];
 }
+
+=head2 keyword
+
+=cut
+
+sub keyword {
+    return 'HELP';
+}
+
+=head2 reply
+
+=cut
+
+sub reply {
+    return ( [ 'HELP', ] );
+}
+
+=head2 help
+
+=cut
+
+sub help {
+    my $self = shift;
+    my ($args) = @_;
+
+    my $ref = $self->{callback}->{HELP};
+    if ( ref $ref eq 'ARRAY' && ref $ref->[0] eq 'CODE' ) {
+        my $code = $ref->[0];
+
+        my $ok = &$code($self, $args);
+    } else {
+        $self->reply(214, "2.0.0 Available Commands: " . join(', ', keys %{$self->{verb}}) . "\nEnd of HELP info");
+    }
+
+    return ();
+}
+
+*Net::Server::Mail::ESMTP::help = \&help;
+
 
 =head1 AUTHOR
 
